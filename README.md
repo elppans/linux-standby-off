@@ -1,17 +1,17 @@
 # linux-standby-off
 ## Desativar Suspensão e Hibernação em Servidores Debian e Ubuntu
 
-Este script é destinado a configurar servidores Debian e Ubuntu para desativar a suspensão e hibernação, além de ajustar a configuração `HandleLidSwitch` para ignorar a tampa do notebook. Ele verifica se os arquivos de configuração necessários existem e ajusta os parâmetros conforme necessário.
+Este script foi desenvolvido para configurar servidores Debian e Ubuntu, garantindo que não entrem em suspensão ou hibernação. Além disso, ele ajusta diversas configurações do `systemd` para evitar eventos inesperados de desligamento ou standby.
 
-#### Funcionalidades:
-- Desativa os serviços de hibernação e suspensão.
-- Configura `HandleLidSwitch` para ignorar o fechamento da tampa.
-- Verifica e cria o arquivo de configuração `/etc/systemd/sleep.conf` se necessário.
-- Ajusta ou adiciona as configurações `AllowSuspend`, `AllowHibernation`, `AllowSuspendThenHibernate` e `AllowHybridSleep` para `no`.
-- Recarrega as configurações do systemd e reinicia o serviço `systemd-logind`.
+### 🔧 Funcionalidades:
+- **Mascaramento de serviços** (`systemd-hibernate.service`, `systemd-suspend.service`, `sleep.target` e `hybrid-sleep.target`) para impedir hibernação e suspensão.
+- **Modificação do `logind.conf`** para ignorar ações relacionadas à tampa do notebook e botões de energia (`HandleLidSwitch`, `HandleSuspendKey`, `HandlePowerKey`, `HandleLidSwitchDocked`).
+- **Criação e ajuste do arquivo `/etc/systemd/sleep.conf`** garantindo que `AllowSuspend`, `AllowHibernation`, `AllowSuspendThenHibernate`, `AllowHybridSleep` e `AllowSleep` estejam desativados.
+- **Backup automático** dos arquivos de configuração antes de modificações.
+- **Recarga do `systemd`** e reinício do serviço `systemd-logind` para aplicação imediata das alterações.
 
-#### Como usar:
-1. Copie o código do script e salve em um arquivo chamado `configure_power_settings.sh`.
+### 🚀 Como usar:
+1. Copie o código do script e salve em um arquivo chamado `linux-standby-off.sh`.
 2. Dê permissão de execução ao script:
    ```bash
    chmod +x linux-standby-off.sh
@@ -20,3 +20,9 @@ Este script é destinado a configurar servidores Debian e Ubuntu para desativar 
    ```bash
    sudo ./linux-standby-off.sh
    ```
+
+### ⚠️ Observação:
+Caso precise restaurar os arquivos de configuração originais, os backups são gerados automaticamente com um timestamp (`backup_DDMMAAAAHHMMSS`). Basta restaurá-los manualmente conforme necessário.
+
+---
+
