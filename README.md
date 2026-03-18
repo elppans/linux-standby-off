@@ -1,28 +1,55 @@
-# linux-standby-off
-## Desativar Suspensão e Hibernação em Servidores Debian e Ubuntu
+# 🐧 Linux Standby Off (Debian/Ubuntu)
 
-Este script foi desenvolvido para configurar servidores Debian e Ubuntu, garantindo que não entrem em suspensão ou hibernação. Além disso, ele ajusta diversas configurações do `systemd` para evitar eventos inesperados de desligamento ou standby.
+Script robusto para desativar permanentemente a suspensão, hibernação e o desligamento de tela em servidores e estações de trabalho (PDV) que rodam Debian ou Ubuntu.
 
-### 🔧 Funcionalidades:
-- **Mascaramento de serviços** (`systemd-hibernate.service`, `systemd-suspend.service`, `sleep.target` e `hybrid-sleep.target`) para impedir hibernação e suspensão.
-- **Modificação do `logind.conf`** para ignorar ações relacionadas à tampa do notebook e botões de energia (`HandleLidSwitch`, `HandleSuspendKey`, `HandlePowerKey`, `HandleLidSwitchDocked`).
-- **Criação e ajuste do arquivo `/etc/systemd/sleep.conf`** garantindo que `AllowSuspend`, `AllowHibernation`, `AllowSuspendThenHibernate`, `AllowHybridSleep` e `AllowSleep` estejam desativados.
-- **Backup automático** dos arquivos de configuração antes de modificações.
-- **Recarga do `systemd`** e reinício do serviço `systemd-logind` para aplicação imediata das alterações.
+## 🎯 Por que usar este script?
+Em ambientes de servidor ou terminais de venda (PDV), o modo de espera pode causar desconexão de banco de dados, interrupção de serviços Java/Node e perda de acesso remoto via SSH. Este script blinda o sistema contra esses eventos em múltiplos níveis.
 
-### 🚀 Como usar:
-1. Copie o código do script e salve em um arquivo chamado `linux-standby-off.sh`.
-2. Dê permissão de execução ao script:
+## 🔧 O que o script faz:
+
+### 1. Nível de Sistema (systemd)
+- **Mascaramento Total:** Bloqueia as unidades `suspend`, `hibernate`, `hybrid-sleep` e `suspend-then-hibernate`.
+- **Configuração de Sleep:** Ajusta o `/etc/systemd/sleep.conf` para garantir que `AllowSuspend=no` e outros parâmetros de repouso sejam aplicados.
+
+### 2. Nível de Hardware (logind)
+- **Interação Física:** Configura o sistema para ignorar o fechamento da tampa do notebook (`HandleLidSwitch`) e botões físicos de Power/Sleep no gabinete.
+
+### 3. Nível de Kernel (GRUB)
+- **Console Persistente:** Adiciona `consoleblank=0` aos parâmetros do GRUB, impedindo que o monitor apague no terminal (tty) após inatividade.
+
+### 4. Nível Gráfico (X11/LXQt)
+- **Prevenção de DPMS:** Desativa o protetor de tela e a economia de energia do monitor caso o sistema possua interface gráfica instalada.
+
+## 🚀 Como usar:
+
+1. **Baixe ou crie o arquivo:**
+   ```bash
+   nano linux-standby-off.sh
+   ```
+   *(Cole o código do script e salve com Ctrl+O / Ctrl+X)*
+
+2. **Dê permissão de execução:**
    ```bash
    chmod +x linux-standby-off.sh
    ```
-3. Execute o script com privilégios de superusuário:
+
+3. **Execute como root:**
    ```bash
    sudo ./linux-standby-off.sh
    ```
 
-### ⚠️ Observação:
-Caso precise restaurar os arquivos de configuração originais, os backups são gerados automaticamente com um timestamp (`backup_DDMMAAAAHHMMSS`). Basta restaurá-los manualmente conforme necessário.
+4. **Reinicie o sistema:**
+   Para que as alterações do GRUB e do Kernel entrem em vigor, é recomendado um reboot:
+   ```bash
+   sudo reboot
+   ```
+
+## ⚠️ Requisitos
+- Sistemas baseados em Debian (Debian 10+, Ubuntu 20.04+, etc).
+- Privilégios de `sudo` ou `root`.
 
 ---
+*Desenvolvido para garantir a alta disponibilidade de serviços críticos e PDVs.*
+```
 
+---
