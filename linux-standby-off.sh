@@ -101,6 +101,34 @@ fi
 GRUB_FILE="/etc/default/grub"
 PARAM="consoleblank=0"
 
+# Função para atualizar o GRUB de forma inteligente (Multi-Distro)
+update_grub_smart() {
+    echo "Atualizando configurações do carregador de inicialização (GRUB)..."
+    
+    if command -v update-grub > /dev/null; then
+        # Padrão Debian/Ubuntu
+        sudo update-grub
+    elif command -v grub-mkconfig > /dev/null; then
+        # Padrão Fedora/Arch/CentOS
+        local grub_path
+        # Tenta encontrar o arquivo de config do grub em caminhos comuns
+        for path in /boot/grub/grub.cfg /boot/grub2/grub.cfg /boot/efi/EFI/fedora/grub.cfg; do
+            if [ -f "$path" ]; then
+                grub_path=$path
+                break
+            fi
+        done
+        
+        if [ -n "$grub_path" ]; then
+            sudo grub-mkconfig -o "$grub_path"
+        else
+            echo "Caminho do grub.cfg não encontrado. Atualize manualmente."
+        fi
+    else
+        echo "Comando de atualização do GRUB não encontrado."
+    fi
+}
+
 if [ -f "$GRUB_FILE" ]; then
     # Verifica se o parâmetro já está presente na linha de comando do Linux
     if grep -q "$PARAM" "$GRUB_FILE"; then
@@ -113,18 +141,7 @@ if [ -f "$GRUB_FILE" ]; then
         sudo sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"\$/ $PARAM\"/" "$GRUB_FILE"
         
         # Atualiza o arquivo de configuração real do GRUB
-        echo "Atualizando a configuração do GRUB (update-grub)..."
-	if command -v update-grub > /dev/null; then
-        	sudo update-grub
-	elif command -v grub-mkconfig > /dev/null; then
-        	# Tenta o caminho padrão do Debian/Ubuntu
-        	sudo grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || \
-        	# Tenta o caminho padrão do Fedora/RedHat/CentOS
-        	sudo grub-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
-    	else
-        	echo "Não foi possível encontrar o comando para atualizar o GRUB."
-    	fi
-        echo "Configuração do GRUB atualizada com sucesso."
+	update_grub_smart
     fi
 else
     echo "Erro: Arquivo $GRUB_FILE não encontrado."
