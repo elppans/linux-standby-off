@@ -126,6 +126,39 @@ else
     echo "Erro: Arquivo $GRUB_FILE não encontrado."
 fi
 
+# Função para desativar economia de energia no ambiente gráfico (X11/LXQt)
+disable_graphic_energy_savings() {
+    echo "Verificando ambiente gráfico (X11)..."
+
+    # Define o display padrão caso não esteja definido
+    export DISPLAY=${DISPLAY:-:0}
+
+    # Verifica se o xset está instalado (pacote x11-xserver-utils)
+    if command -v xset > /dev/null; then
+        # Tenta aplicar as configurações para o usuário logado no momento
+        # s off: Desativa protetor de tela
+        # -dpms: Desativa o desligamento físico do monitor
+        # s noblank: Impede a tela de ficar preta
+        if xset s off -dpms s noblank 2>/dev/null; then
+            sudo touch /etc/profile.d/xset_noblank.sh
+            sudo chmod +x /etc/profile.d/xset_noblank.sh
+            echo -e '#!/bin/bash
+            export DISPLAY=${DISPLAY:-:0}
+            xset s off -dpms s noblank 2>/dev/null
+            ' | sudo tee /etc/profile.d/xset_noblank.sh &>>/dev/null
+            echo "Configurações de DPMS/X11 aplicadas com sucesso."
+        else
+            echo "Não foi possível comunicar com o X11 (o servidor gráfico pode estar desligado)."
+        fi
+    else
+        echo "xset não encontrado. Ignorando configurações de interface gráfica."
+    fi
+}
+
+# Para rodar a função: 
+# Ps.: OPCIONAL, deixe descomentado APENAS se seu sistema tiver GUI e se realmente quer que o monitor fique 100% ativo
+disable_graphic_energy_savings
+
 # echo "Configurações de suspensão desativadas com sucesso!"
 
 echo "Configurações de hibernação e suspensão desativadas e HandleLidSwitch configurado."
