@@ -157,7 +157,7 @@ disable_graphic_energy_savings() {
 
 # Para rodar a função: 
 # Ps.: OPCIONAL, deixe descomentado APENAS se seu sistema tiver GUI e se realmente quer que o monitor fique 100% ativo
-disable_graphic_energy_savings
+# disable_graphic_energy_savings
 
 # echo "Configurações de suspensão desativadas com sucesso!"
 
