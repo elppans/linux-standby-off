@@ -47,9 +47,13 @@ Em ambientes de servidor ou terminais de venda (PDV), o modo de espera pode caus
 ## ⚠️ Requisitos
 - Sistemas baseados em Debian (Debian 10+, Ubuntu 20.04+, etc).
 - Privilégios de `sudo` ou `root`.
-
+___
+## ✅ Compatibilidade
+O script foi projetado para ser agnóstico à distribuição, desde que utilize **systemd** e **GRUB**:
+- **Sistemas Base Debian:** Ubuntu, Debian, Mint, Kali, Raspberry Pi OS.
+- **Sistemas Base RHEL:** Fedora, CentOS, AlmaLinux (via grub-mkconfig).
+- **Ambientes Gráficos:** LXQt, XFCE, GNOME, KDE (via xset/DPMS).
 ---
 *Desenvolvido para garantir a alta disponibilidade de serviços críticos e PDVs.*
-```
 
----
+
