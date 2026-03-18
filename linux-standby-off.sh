@@ -2,6 +2,11 @@
 
 # Debian Server, configurar Power Settings
 
+if [[ $EUID -ne 0 ]]; then
+   echo "Este script precisa ser executado como root (sudo)." 
+   exit 1
+fi
+
 LOGIND_CONF="/etc/systemd/logind.conf"
 HANDLE_LID_SWITCH="HandleLidSwitch=ignore"
 
