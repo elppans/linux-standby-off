@@ -1,35 +1,45 @@
 #!/bin/bash
 
-if [ "$(id -u)" != "0" ]; then
-echo "Deve executar o comando como super usuario!"
-exit 0
-fi
-
 # Debian Server, configurar Power Settings
 
 LOGIND_CONF="/etc/systemd/logind.conf"
 HANDLE_LID_SWITCH="HandleLidSwitch=ignore"
 
 # Desativar hibernação
-systemctl mask systemd-hibernate.service
+sudo systemctl mask systemd-hibernate.service
 
 # Desativar suspensão
-systemctl mask systemd-suspend.service
+sudo systemctl mask systemd-suspend.service
+
+# Para um bloqueio total
+sudo systemctl mask hybrid-sleep.target suspend-then-hibernate.target
 
 # Verificar se HandleLidSwitch existe e ajustar
 if [ -f "$LOGIND_CONF" ]; then
     if grep -q "^$HANDLE_LID_SWITCH" "$LOGIND_CONF"; then
         echo "HandleLidSwitch already set to ignore."
     else
-        sed -i "/^#*\s*HandleLidSwitch/c$HANDLE_LID_SWITCH" "$LOGIND_CONF"
+        sudo sed -i "/^#*\s*HandleLidSwitch/c$HANDLE_LID_SWITCH" "$LOGIND_CONF"
         echo "HandleLidSwitch set to ignore."
     fi
 else
     echo "$LOGIND_CONF not found."
 fi
 
+# Outras opções de hardware no logind.conf
+add_to_logind() {
+    local key=$1
+    sudo sed -i "/^#*\s*$key/c$key=ignore" "$LOGIND_CONF"
+}
+
+add_to_logind "HandlePowerKey"
+add_to_logind "HandleSuspendKey"
+add_to_logind "HandleHibernateKey"
+add_to_logind "HandleLidSwitchExternalPower"
+add_to_logind "HandleLidSwitchDocked"
+
 # Recarregar as configurações do systemd
-systemctl daemon-reload
+sudo systemctl daemon-reload
 
 # Ubuntu Server, desativar Standby
 
@@ -38,7 +48,11 @@ CONFIG_FILE="/etc/systemd/sleep.conf"
 # Verifica se o arquivo de configuração existe
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Arquivo $CONFIG_FILE não encontrado. Criando o arquivo..."
-    touch "$CONFIG_FILE"
+    sudo touch "$CONFIG_FILE"
+fi
+
+if ! grep -q "^\[Sleep\]" "$CONFIG_FILE"; then
+    echo "[Sleep]" | sudo tee "$CONFIG_FILE" > /dev/null
 fi
 
 # Função para adicionar ou ajustar configuração
@@ -47,10 +61,10 @@ add_or_update_config() {
     local value=$2
     if grep -q "^#$key" "$CONFIG_FILE"; then
         # Descomenta a linha e ajusta o valor
-        sed -i "s/^#$key=.*/$key=$value/" "$CONFIG_FILE"
+        sudo sed -i "s/^#$key=.*/$key=$value/" "$CONFIG_FILE"
     elif grep -q "^$key" "$CONFIG_FILE"; then
         # Ajusta o valor se já existir
-        sed -i "s/^$key=.*/$key=$value/" "$CONFIG_FILE"
+        sudo sed -i "s/^$key=.*/$key=$value/" "$CONFIG_FILE"
     else
         # Adiciona a linha se não existir
         echo "$key=$value" | sudo tee -a "$CONFIG_FILE" > /dev/null
@@ -64,36 +78,53 @@ add_or_update_config "AllowSuspendThenHibernate" "no"
 add_or_update_config "AllowHybridSleep" "no"
 
 # Reinicia o serviço systemd-logind para aplicar as alterações
-systemctl restart systemd-logind
+sudo systemctl restart systemd-logind
 
-# echo "Configurações de suspensão desativadas com sucesso!"
 
-echo "Configurações de hibernação e suspensão desativadas e HandleLidSwitch configurado."
-# Configuração
-add_or_update_config() {
-    local key=$1
-    local value=$2
-    if grep -q "^#$key" "$CONFIG_FILE"; then
-        # Descomenta a linha e ajusta o valor
-        sed -i "s/^#$key=.*/$key=$value/" "$CONFIG_FILE"
-    elif grep -q "^$key" "$CONFIG_FILE"; then
-        # Ajusta o valor se já existir
-        sed -i "s/^$key=.*/$key=$value/" "$CONFIG_FILE"
+# Desativar o desligamento da tela no terminal (tty)
+# Desativar o "blanking" da tela no terminal físico (tty)
+# Redirecionamos para /dev/tty1 para afetar o monitor local, mesmo via SSH
+if [ -e /dev/tty1 ]; then
+    sudo setterm -blank 0 -powersave off -powerdown 0 < /dev/tty1
+    echo "Screen blanking desativado para /dev/tty1."
+fi
+
+# Garantir persistência no kernel (opcional, mas recomendado)
+# Isso desativa o console blanking da tela no terminal a nível de kernel até o próximo reboot
+if [ -f /sys/module/kernel/parameters/consoleblank ]; then
+    echo 0 | sudo tee /sys/module/kernel/parameters/consoleblank > /dev/null
+fi
+# Nota: Para que isso seja persistente após o reboot, geralmente é necessário adicionar consoleblank=0 aos parâmetros do GRUB
+
+# --- Configuração de Persistência no GRUB (consoleblank=0) ---
+
+GRUB_FILE="/etc/default/grub"
+PARAM="consoleblank=0"
+
+if [ -f "$GRUB_FILE" ]; then
+    # Verifica se o parâmetro já está presente na linha de comando do Linux
+    if grep -q "$PARAM" "$GRUB_FILE"; then
+        echo "O parâmetro $PARAM já existe no GRUB. Nenhuma alteração necessária."
     else
-        # Adiciona a linha se não existir
-        echo "$key=$value" | tee -a "$CONFIG_FILE" > /dev/null
+        echo "Adicionando $PARAM aos parâmetros do GRUB..."
+        
+        # Usa sed para inserir o parâmetro dentro das aspas de GRUB_CMDLINE_LINUX_DEFAULT
+        # O comando procura a linha, e antes do fechamento das aspas, insere um espaço e o parâmetro
+        sudo sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"\$/ $PARAM\"/" "$GRUB_FILE"
+        
+        # Atualiza o arquivo de configuração real do GRUB
+        echo "Atualizando a configuração do GRUB (update-grub)..."
+        if command -v update-grub > /dev/null; then
+            sudo update-grub
+        else
+            # Caso o comando update-grub não exista (comum em algumas distros puras)
+            sudo grub-mkconfig -o /boot/grub/grub.cfg
+        fi
+        echo "Configuração do GRUB atualizada com sucesso."
     fi
-}
-
-# Adiciona ou ajusta as configurações
-add_or_update_config "AllowSuspend" "no"
-add_or_update_config "AllowHibernation" "no"
-add_or_update_config "AllowSuspendThenHibernate" "no"
-add_or_update_config "AllowHybridSleep" "no"
-add_or_update_config "AllowSleep" "no"
-
-# Reinicia o serviço systemd-logind para aplicar as alterações
-systemctl restart systemd-logind
+else
+    echo "Erro: Arquivo $GRUB_FILE não encontrado."
+fi
 
 # echo "Configurações de suspensão desativadas com sucesso!"
 
