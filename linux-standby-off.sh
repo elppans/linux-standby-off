@@ -114,12 +114,16 @@ if [ -f "$GRUB_FILE" ]; then
         
         # Atualiza o arquivo de configuração real do GRUB
         echo "Atualizando a configuração do GRUB (update-grub)..."
-        if command -v update-grub > /dev/null; then
-            sudo update-grub
-        else
-            # Caso o comando update-grub não exista (comum em algumas distros puras)
-            sudo grub-mkconfig -o /boot/grub/grub.cfg
-        fi
+	if command -v update-grub > /dev/null; then
+        	sudo update-grub
+	elif command -v grub-mkconfig > /dev/null; then
+        	# Tenta o caminho padrão do Debian/Ubuntu
+        	sudo grub-mkconfig -o /boot/grub/grub.cfg 2>/dev/null || \
+        	# Tenta o caminho padrão do Fedora/RedHat/CentOS
+        	sudo grub-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+    	else
+        	echo "Não foi possível encontrar o comando para atualizar o GRUB."
+    	fi
         echo "Configuração do GRUB atualizada com sucesso."
     fi
 else
@@ -157,7 +161,7 @@ disable_graphic_energy_savings() {
 
 # Para rodar a função: 
 # Ps.: OPCIONAL, deixe descomentado APENAS se seu sistema tiver GUI e se realmente quer que o monitor fique 100% ativo
-# disable_graphic_energy_savings
+disable_graphic_energy_savings
 
 # echo "Configurações de suspensão desativadas com sucesso!"
 
